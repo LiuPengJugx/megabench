@@ -1,8 +1,8 @@
 # Metadata Query Sketches
 
-The first MegaBench release does not execute database metadata queries. These
-sketches are only for a future executable edition and must be reviewed before
-running in any production environment.
+MegaBench public artifacts are generated offline. These metadata query sketches
+are for maintainers who need to refresh `distribution_spec.json`; they must be
+reviewed before running in any production environment.
 
 Avoid `COUNT(*)`, `DISTINCT`, sampling over large external tables, or any full
 scan. Use catalog/system tables only.

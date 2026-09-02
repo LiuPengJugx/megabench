@@ -12,14 +12,30 @@ private raw_data.jsonl
   -> rare-template filtering
   -> public workload + template catalog + distribution report
   -> synthetic workload generation
+
+public distribution_spec.json
+  -> deterministic wide-table row generation
+  -> partitioned CSV or optional Parquet files
+  -> dataset manifest + schema + file index
 ```
 
-## Why Workload-Only First
+## Dataset Generation
 
-The target task is pre-execution mega-query detection. For this task, realistic
-query shapes, labels, and workload distributions are more important than an
-executable database. A synthetic data generator can be added later for engine
-benchmarking, but it is not required for classifier evaluation.
+The core benchmark remains pre-execution mega-query detection, but v0.2 also
+ships a synthetic wide-table generator. The generator uses only public coarse
+distribution parameters:
+
+- temporal and hourly workload skew;
+- head/tail item, user, and author ID distributions;
+- categorical mixes for scene, strategy, experiment, region, app, device, and
+  traffic source;
+- sparse commercial metrics and engagement counters;
+- JSON-like attributes and array-like columns;
+- additional synthetic wide-table dimension, flag, and metric columns.
+
+Official target sizes are `1G`, `10G`, `100G`, and `1000G`. Generated data is
+partitioned by `event_date`. CSV requires only the Python standard library;
+Parquet is optional and requires `pyarrow`.
 
 ## Public vs Oracle Fields
 

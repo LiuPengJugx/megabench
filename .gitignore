@@ -12,6 +12,7 @@ dist/
 # Generated benchmark artifacts can be large and may derive from private traces.
 artifacts/
 data/private/
+data/generated/
 outputs/
 public/
 *.jsonl

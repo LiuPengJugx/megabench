@@ -6,9 +6,10 @@ MegaBench is a trace-derived workload benchmark toolkit for external-table OLAP
 mega-query detection.
 
 It is intentionally closer to ClickBench-style realistic workload modeling than
-to a full TPC-H/TPC-DS executable benchmark. The first release focuses on
+to a full TPC-H/TPC-DS executable benchmark. The current release focuses on
 publishing a privacy-preserving query workload: sanitized SQL shapes, structural
-features, bucketed oracle metrics, labels, templates, and a generator.
+features, bucketed oracle metrics, labels, templates, a query generator, and a
+synthetic wide-table data generator.
 
 ## Artifacts
 
@@ -29,6 +30,8 @@ are intentionally excluded.
   sanitized plan features, labels, and bucketed oracle metrics.
 - `templates.json.gz`: template catalog mined from recurring query shapes.
 - `stats.json`: private/public histogram summaries and validation metrics.
+- `distribution_spec.json`: coarse synthetic-data distribution parameters for
+  generating an executable wide-table dataset.
 - `manifest.json`: artifact metadata, including scanned record counts, sample
   size, template count, and privacy boundary.
 - `validation_report.md`: compact artifact quality and privacy report.
@@ -45,6 +48,47 @@ source ./env.sh
 This creates `.venv` with `uv sync`, installs MegaBench in editable mode, and
 activates the environment. No runtime dependency beyond the Python standard
 library is required. The dev environment includes `pytest`.
+
+## Generate Synthetic Dataset
+
+MegaBench can generate a local ClickBench-like wide event/fact table using the
+public `data/public/distribution_spec.json`. Official target scales are `1G`,
+`10G`, `100G`, and `1000G`; the target refers to generated data-file size.
+
+```bash
+megabench dataset generate --scale 1G
+```
+
+By default this writes CSV files under `data/generated/1G/`:
+
+```text
+data/generated/1G/
+  manifest.json
+  schema.json
+  files.json
+  distribution_spec.snapshot.json
+  events_wide/
+    event_date=2026-08-01/
+      part-00000.csv
+```
+
+The synthetic table includes content/item, user/device, recommendation strategy,
+experiment, geography/app, traffic source, engagement, commercial metrics,
+JSON-like attributes, arrays, and additional wide dimension/metric columns. Data
+generation is deterministic for a fixed seed.
+
+Parquet output is supported when `pyarrow` is installed:
+
+```bash
+uv sync --extra parquet
+megabench dataset generate --scale 1G --format parquet
+```
+
+Inspect a generated dataset:
+
+```bash
+megabench dataset inspect data/generated/1G
+```
 
 ## Generate Synthetic Workload Rows
 
@@ -107,14 +151,16 @@ Before publishing, review `validation_report.md` and inspect a random sample of
 
 ## Scope
 
-MegaBench v0.1 is not an executable database benchmark. It is meant for:
+MegaBench v0.2 is not a full database-engine benchmark. It is meant for:
 
 - training and evaluating mega-query classifiers;
 - studying realistic external-table OLAP workload distributions;
+- generating synthetic wide-table data at `1G`, `10G`, `100G`, and `1000G`;
 - generating larger synthetic query streams from observed templates.
 
-A future executable edition can add a synthetic wide-table dataset, loader, and
-engine-specific runners.
+The generated dataset is synthetic and executable, but it should not be treated
+as a full database-engine benchmark yet. Engine-specific loaders and query
+runners are future work.
 
 ## Maintainers
 

@@ -1,0 +1,66 @@
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+from megabench.cli import main
+from megabench.dataset import generate_dataset, inspect_dataset, parse_size
+
+
+SPEC_PATH = Path(__file__).resolve().parents[1] / "data" / "public" / "distribution_spec.json"
+
+
+class DatasetTest(unittest.TestCase):
+    def test_parse_size(self):
+        self.assertEqual(parse_size("1K"), 1024)
+        self.assertEqual(parse_size("1G"), 1 << 30)
+        self.assertEqual(parse_size("1000G"), 1000 * (1 << 30))
+
+    def test_generate_csv_dataset(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "dataset"
+            result = generate_dataset(
+                scale="12K",
+                output_dir=out,
+                spec_path=SPEC_PATH,
+                fmt="csv",
+                seed=3,
+                target_file_size="8K",
+            )
+            self.assertTrue(result.completed_scale)
+            self.assertGreater(result.row_count, 0)
+            self.assertTrue((out / "manifest.json").exists())
+            self.assertTrue((out / "schema.json").exists())
+            self.assertTrue((out / "files.json").exists())
+            self.assertGreater(len(list((out / "events_wide").rglob("*.csv"))), 0)
+            manifest = inspect_dataset(out)
+            self.assertEqual(manifest["artifact"], "synthetic_dataset")
+            self.assertEqual(manifest["format"], "csv")
+
+    def test_cli_dataset_generate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "dataset"
+            status = main(
+                [
+                    "dataset",
+                    "generate",
+                    "--scale",
+                    "8K",
+                    "--output",
+                    str(out),
+                    "--spec",
+                    str(SPEC_PATH),
+                    "--seed",
+                    "5",
+                    "--target-file-size",
+                    "4K",
+                ]
+            )
+            self.assertEqual(status, 0)
+            manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["format"], "csv")
+            self.assertGreaterEqual(manifest["actual_data_bytes"], parse_size("8K"))
+
+
+if __name__ == "__main__":
+    unittest.main()

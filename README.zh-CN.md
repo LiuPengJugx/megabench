@@ -6,8 +6,9 @@ MegaBench 是一个面向外表 OLAP 场景 Mega-query 检测的 trace-derived
 workload benchmark 工具集。
 
 它更接近 ClickBench 风格的真实 workload 建模，而不是完整的
-TPC-H/TPC-DS 可执行数据库 benchmark。首个版本聚焦发布隐私保护后的查询
-workload：脱敏 SQL 形态、结构化特征、分桶后的 oracle 指标、标签、模板和生成器。
+TPC-H/TPC-DS 可执行数据库 benchmark。当前版本聚焦发布隐私保护后的查询
+workload：脱敏 SQL 形态、结构化特征、分桶后的 oracle 指标、标签、模板、查询生成器，
+以及合成大宽表数据生成器。
 
 ## Artifacts
 
@@ -23,6 +24,7 @@ workload：脱敏 SQL 形态、结构化特征、分桶后的 oracle 指标、�
 - `workload.jsonl`：公开 workload 样本，包含脱敏 SQL、执行前特征、脱敏后的 plan 特征、标签和分桶后的 oracle 指标。
 - `templates.json.gz`：从重复查询形态中挖掘出的模板目录。
 - `stats.json`：私有 trace 与公开样本的直方图摘要和验证指标。
+- `distribution_spec.json`：用于生成可执行大宽表数据集的粗粒度合成数据分布参数。
 - `manifest.json`：artifact 元信息，包括扫描记录数、样本大小、模板数量和隐私边界。
 - `validation_report.md`：简洁的 artifact 质量与隐私报告。
 
@@ -35,6 +37,46 @@ source ./env.sh
 ```
 
 该命令会通过 `uv sync` 创建 `.venv`，以 editable mode 安装 MegaBench，并激活环境。运行时不依赖 Python 标准库之外的包；开发环境包含 `pytest`。
+
+## 生成合成数据集
+
+MegaBench 可以基于公开的 `data/public/distribution_spec.json`，在本地生成
+ClickBench-like 的大宽事件/事实表。官方目标规模包括 `1G`、`10G`、`100G`
+和 `1000G`；这里的规模指生成后的数据文件大小。
+
+```bash
+megabench dataset generate --scale 1G
+```
+
+默认会在 `data/generated/1G/` 下写出 CSV 文件：
+
+```text
+data/generated/1G/
+  manifest.json
+  schema.json
+  files.json
+  distribution_spec.snapshot.json
+  events_wide/
+    event_date=2026-08-01/
+      part-00000.csv
+```
+
+合成表包含内容/对象、用户/设备、推荐策略、实验分组、地域/app、流量来源、
+互动指标、商业指标、JSON-like 属性、数组列，以及额外的大宽表维度列和指标列。
+固定 seed 下生成结果可复现。
+
+如需输出 Parquet，需要先安装 `pyarrow`：
+
+```bash
+uv sync --extra parquet
+megabench dataset generate --scale 1G --format parquet
+```
+
+检查已生成的数据集：
+
+```bash
+megabench dataset inspect data/generated/1G
+```
 
 ## 生成合成 Workload 记录
 
@@ -95,13 +137,15 @@ megabench generate
 
 ## 范围
 
-MegaBench v0.1 不是可执行数据库 benchmark。它适用于：
+MegaBench v0.2 不是完整的数据库引擎 benchmark。它适用于：
 
 - 训练和评估 Mega-query 分类器；
 - 研究真实外表 OLAP workload 分布；
+- 生成 `1G`、`10G`、`100G` 和 `1000G` 规模的合成大宽表数据；
 - 基于观测模板生成更大的合成查询流。
 
-未来的 executable edition 可以补充合成大宽表数据集、loader 和面向不同引擎的 runner。
+当前生成的数据集是 synthetic 且可执行的，但还不应被视为完整的数据库引擎 benchmark。
+面向不同引擎的 loader 和 query runner 属于后续工作。
 
 ## 维护者
 
