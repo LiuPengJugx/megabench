@@ -42,10 +42,17 @@ source ./env.sh
 
 MegaBench 可以基于公开的 `data/public/distribution_spec.json`，在本地生成
 ClickBench-like 的大宽事件/事实表。官方目标规模包括 `1G`、`10G`、`100G`
-和 `1000G`；这里的规模指生成后的数据文件大小。
+和 `1000G`；这里的规模指生成后的数据文件大小。默认合成日期窗口从
+`2024-01-01` 开始，持续 30 天。
 
 ```bash
 megabench dataset generate --scale 1G
+```
+
+需要时可以覆盖生成的分区日期：
+
+```bash
+megabench dataset generate --scale 1G --start-date 2024-06-01 --days 14
 ```
 
 默认会在 `data/generated/1G/` 下写出 CSV 文件：
@@ -57,7 +64,7 @@ data/generated/1G/
   files.json
   distribution_spec.snapshot.json
   events_wide/
-    event_date=2026-08-01/
+    event_date=2024-01-01/
       part-00000.csv
 ```
 

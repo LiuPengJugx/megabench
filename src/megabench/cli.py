@@ -89,6 +89,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     dataset_generate.add_argument("--format", choices=["csv", "parquet"], default="csv", help="Output file format.")
     dataset_generate.add_argument("--seed", type=int, default=1, help="Random seed.")
+    dataset_generate.add_argument("--start-date", default=None, help="Override dataset start date, for example 2024-01-01.")
+    dataset_generate.add_argument("--days", type=int, default=None, help="Override number of event_date partitions.")
     dataset_generate.add_argument("--target-file-size", default="128M", help="Approximate target size per CSV part.")
     dataset_generate.add_argument("--max-rows", type=int, default=None, help="Debug cap. Stops early if set.")
     dataset_generate.add_argument("--compression", default="snappy", help="Parquet compression when --format parquet.")
@@ -145,8 +147,10 @@ def main(argv: list[str] | None = None) -> int:
                     target_file_size=args.target_file_size,
                     max_rows=args.max_rows,
                     compression=args.compression,
+                    start_date=args.start_date,
+                    days=args.days,
                 )
-            except RuntimeError as exc:
+            except (RuntimeError, ValueError) as exc:
                 parser.exit(1, f"error: {exc}\n")
             print(
                 "Generated MegaBench dataset: "

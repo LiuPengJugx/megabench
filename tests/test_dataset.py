@@ -36,8 +36,9 @@ class DatasetTest(unittest.TestCase):
             manifest = inspect_dataset(out)
             self.assertEqual(manifest["artifact"], "synthetic_dataset")
             self.assertEqual(manifest["format"], "csv")
+            self.assertEqual(manifest["start_date"], "2024-01-01")
 
-    def test_cli_dataset_generate(self):
+    def test_cli_dataset_generate_with_date_override(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "dataset"
             status = main(
@@ -54,12 +55,20 @@ class DatasetTest(unittest.TestCase):
                     "5",
                     "--target-file-size",
                     "4K",
+                    "--start-date",
+                    "2024-06-01",
+                    "--days",
+                    "1",
                 ]
             )
             self.assertEqual(status, 0)
             manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["format"], "csv")
+            self.assertEqual(manifest["start_date"], "2024-06-01")
+            self.assertEqual(manifest["end_date"], "2024-06-01")
+            self.assertEqual(manifest["days"], 1)
             self.assertGreaterEqual(manifest["actual_data_bytes"], parse_size("8K"))
+            self.assertTrue((out / "events_wide" / "event_date=2024-06-01").exists())
 
 
 if __name__ == "__main__":

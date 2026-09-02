@@ -34,8 +34,10 @@ distribution parameters:
 - additional synthetic wide-table dimension, flag, and metric columns.
 
 Official target sizes are `1G`, `10G`, `100G`, and `1000G`. Generated data is
-partitioned by `event_date`. CSV requires only the Python standard library;
-Parquet is optional and requires `pyarrow`.
+partitioned by `event_date`. The default date window comes from the public
+distribution spec and can be overridden with `--start-date` and `--days`. CSV
+requires only the Python standard library; Parquet is optional and requires
+`pyarrow`.
 
 ## Public vs Oracle Fields
 

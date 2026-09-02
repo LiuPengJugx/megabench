@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import bisect
+import copy
 import csv
 import gzip
 import json
@@ -77,7 +78,7 @@ class _DatasetRowGenerator:
         self.spec = spec
         self.rng = random.Random(seed)
         temporal = spec.get("temporal", {})
-        self.start_date = date.fromisoformat(str(temporal.get("start_date", "2026-08-01")))
+        self.start_date = date.fromisoformat(str(temporal.get("start_date", "2024-01-01")))
         self.days = max(1, int(temporal.get("days", 30)))
         self.date_sampler = _WeightedSampler(self._date_weights(temporal))
         self.hour_sampler = _WeightedSampler([float(v) for v in temporal.get("hour_weights", [1.0] * 24)])
@@ -375,6 +376,8 @@ def generate_dataset(
     target_file_size: str = "128M",
     max_rows: int | None = None,
     compression: str = "snappy",
+    start_date: str | None = None,
+    days: int | None = None,
 ) -> DatasetResult:
     target_bytes = parse_size(scale)
     target_file_bytes = parse_size(target_file_size)
@@ -383,7 +386,7 @@ def generate_dataset(
     fmt = fmt.lower()
     if fmt not in {"csv", "parquet"}:
         raise ValueError("format must be one of: csv, parquet")
-    spec = load_distribution_spec(spec_path)
+    spec = _apply_temporal_overrides(load_distribution_spec(spec_path), start_date=start_date, days=days)
     out_path = Path(output_dir) if output_dir is not None else Path("data/generated") / scale
     if out_path.exists():
         shutil.rmtree(out_path)
@@ -428,6 +431,20 @@ def inspect_dataset(path: str | Path) -> dict[str, Any]:
         "human_actual_data_size": format_size(sum(p.stat().st_size for p in data_files)),
         "has_manifest": False,
     }
+
+
+def _apply_temporal_overrides(spec: dict[str, Any], *, start_date: str | None, days: int | None) -> dict[str, Any]:
+    updated = copy.deepcopy(spec)
+    temporal = updated.setdefault("temporal", {})
+    if start_date is not None:
+        # Validate early so CLI users get a clear error before files are written.
+        date.fromisoformat(start_date)
+        temporal["start_date"] = start_date
+    if days is not None:
+        if days <= 0:
+            raise ValueError("days must be positive")
+        temporal["days"] = int(days)
+    return updated
 
 
 def _generate_csv_dataset(
@@ -575,6 +592,10 @@ def _write_dataset_metadata(
     scale: str,
 ) -> None:
     schema = build_dataset_schema(spec)
+    temporal = spec.get("temporal", {})
+    start = date.fromisoformat(str(temporal.get("start_date", "2024-01-01")))
+    days = max(1, int(temporal.get("days", 30)))
+    end = start + timedelta(days=days - 1)
     write_json(output_dir / "schema.json", {"table": result.table_name, "columns": schema}, pretty=True)
     write_json(
         output_dir / "manifest.json",
@@ -592,6 +613,9 @@ def _write_dataset_metadata(
             "human_actual_data_size": format_size(result.actual_data_bytes),
             "row_count": result.row_count,
             "file_count": result.file_count,
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+            "days": days,
             "completed_scale": result.completed_scale,
             "distribution_spec": str(spec_path),
             "generated_at_unix": int(time.time()),

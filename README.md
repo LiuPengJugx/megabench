@@ -53,10 +53,17 @@ library is required. The dev environment includes `pytest`.
 
 MegaBench can generate a local ClickBench-like wide event/fact table using the
 public `data/public/distribution_spec.json`. Official target scales are `1G`,
-`10G`, `100G`, and `1000G`; the target refers to generated data-file size.
+`10G`, `100G`, and `1000G`; the target refers to generated data-file size. The
+default synthetic date window starts at `2024-01-01` for 30 days.
 
 ```bash
 megabench dataset generate --scale 1G
+```
+
+Override the generated partition dates when needed:
+
+```bash
+megabench dataset generate --scale 1G --start-date 2024-06-01 --days 14
 ```
 
 By default this writes CSV files under `data/generated/1G/`:
@@ -68,7 +75,7 @@ data/generated/1G/
   files.json
   distribution_spec.snapshot.json
   events_wide/
-    event_date=2026-08-01/
+    event_date=2024-01-01/
       part-00000.csv
 ```
 
