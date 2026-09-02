@@ -1,0 +1,4 @@
+{
+  "name": "mega_query_heavy",
+  "description": "Query stream with a higher share of patterns that often produce mega-query labels."
+}

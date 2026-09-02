@@ -399,7 +399,7 @@ def _is_alias_candidate(tokens: list[Token], index: int) -> bool:
 
 def _next_table_name(table_map: dict[str, str], raw: str) -> str:
     if raw not in table_map:
-        table_map[raw] = f"events_wide_{len(table_map) + 1:03d}"
+        table_map[raw] = f"events_wide_table_{len(table_map) + 1:03d}"
     return table_map[raw]
 
 

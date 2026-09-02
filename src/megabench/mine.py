@@ -40,6 +40,7 @@ def build_public_artifacts(
         raise FileNotFoundError(f"No raw_data.jsonl files found under {trace_path!s}")
 
     out_path = ensure_dir(output_dir)
+    workload_path = ensure_dir(out_path / "workload")
     pattern_counts: Counter[str] = Counter()
     private_summary_rows: list[dict[str, Any]] = []
 
@@ -132,10 +133,10 @@ def build_public_artifacts(
     public_summary.get("histograms", {}).pop("template_id", None)
     comparison = compare_summaries(private_summary, public_summary)
 
-    write_jsonl(out_path / "workload.jsonl", public_rows)
-    write_json_gzip(out_path / "templates.json.gz", {"templates": templates})
+    write_jsonl(workload_path / "query_sample.jsonl", public_rows)
+    write_json_gzip(workload_path / "query_templates.json.gz", {"templates": templates})
     write_json(
-        out_path / "stats.json",
+        workload_path / "workload_stats.json",
         {
             "private": private_summary,
             "retained": retained_summary,
@@ -144,15 +145,16 @@ def build_public_artifacts(
         },
     )
     write_json(
-        out_path / "manifest.json",
+        out_path / "benchmark_manifest.json",
         {
             "benchmark": "megabench",
             "format_version": 1,
             "artifact_files": {
-                "workload": "workload.jsonl",
-                "templates": "templates.json.gz",
-                "stats": "stats.json",
-                "validation_report": "validation_report.md",
+                "workload_sample": "workload/query_sample.jsonl",
+                "query_templates": "workload/query_templates.json.gz",
+                "workload_stats": "workload/workload_stats.json",
+                "validation_report": "workload/validation_report.md",
+                "distribution_spec": "synthetic_dataset/distribution_spec.json",
             },
             "source_files": len(source_files),
             "private_records_scanned": len(private_summary_rows),
@@ -171,7 +173,7 @@ def build_public_artifacts(
             },
         },
     )
-    (out_path / "validation_report.md").write_text(
+    (workload_path / "validation_report.md").write_text(
         render_markdown_report(
             comparison,
             min_pattern_count=min_pattern_count,

@@ -7,7 +7,7 @@ from megabench.cli import main
 from megabench.dataset import generate_dataset, inspect_dataset, parse_size
 
 
-SPEC_PATH = Path(__file__).resolve().parents[1] / "data" / "public" / "distribution_spec.json"
+SPEC_PATH = Path(__file__).resolve().parents[1] / "data" / "public" / "synthetic_dataset" / "distribution_spec.json"
 
 
 class DatasetTest(unittest.TestCase):
@@ -31,11 +31,13 @@ class DatasetTest(unittest.TestCase):
             self.assertTrue(result.completed_scale)
             self.assertGreater(result.row_count, 0)
             self.assertTrue((out / "manifest.json").exists())
-            self.assertTrue((out / "schema.json").exists())
-            self.assertTrue((out / "files.json").exists())
-            self.assertGreater(len(list((out / "events_wide").rglob("*.csv"))), 0)
+            self.assertTrue((out / "table_schema.json").exists())
+            self.assertTrue((out / "file_index.json").exists())
+            self.assertTrue((out / "distribution_spec_used.json").exists())
+            self.assertGreater(len(list((out / "events_wide_table").rglob("*.csv"))), 0)
             manifest = inspect_dataset(out)
             self.assertEqual(manifest["artifact"], "synthetic_dataset")
+            self.assertEqual(manifest["table"], "events_wide_table")
             self.assertEqual(manifest["format"], "csv")
             self.assertEqual(manifest["start_date"], "2024-01-01")
 
@@ -69,7 +71,7 @@ class DatasetTest(unittest.TestCase):
             self.assertEqual(manifest["end_date"], "2024-06-01")
             self.assertEqual(manifest["days"], 1)
             self.assertGreaterEqual(manifest["actual_data_bytes"], parse_size("0.000008", default_unit="GB"))
-            self.assertTrue((out / "events_wide" / "event_date=2024-06-01").exists())
+            self.assertTrue((out / "events_wide_table" / "event_date=2024-06-01").exists())
 
 
 if __name__ == "__main__":

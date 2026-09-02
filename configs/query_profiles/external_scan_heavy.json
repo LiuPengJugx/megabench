@@ -1,0 +1,4 @@
+{
+  "name": "external_scan_heavy",
+  "description": "Query stream with more patterns that trigger large external-table scans."
+}

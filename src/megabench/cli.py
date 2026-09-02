@@ -7,15 +7,16 @@ import json
 from pathlib import Path
 
 from .dataset import OFFICIAL_SCALES, format_size, generate_dataset, inspect_dataset
-from .generate import generate_workload
+from .generate import PROFILE_NAMES, generate_workload, normalize_profile
 from .mine import build_public_artifacts
 from .profile import DEFAULT_PROFILE_OUTPUT, profile_columns
 
 
 DEFAULT_TRACE_PATH = Path("data/private")
 DEFAULT_PUBLIC_DIR = Path("data/public")
-DEFAULT_GENERATED_WORKLOAD = Path("artifacts/generated_workload.jsonl")
-DEFAULT_DISTRIBUTION_SPEC = DEFAULT_PUBLIC_DIR / "distribution_spec.json"
+DEFAULT_QUERY_STREAM_DIR = Path("artifacts/query_streams")
+DEFAULT_DATASET_DIR = Path("artifacts/datasets")
+DEFAULT_DISTRIBUTION_SPEC = DEFAULT_PUBLIC_DIR / "synthetic_dataset" / "distribution_spec.json"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -34,7 +35,7 @@ def main(argv: list[str] | None = None) -> int:
         help=f"Advanced: directory for public artifacts. Default: {DEFAULT_PUBLIC_DIR}",
     )
     build.add_argument("--limit", type=int, default=None, help="Maximum number of source records to scan.")
-    build.add_argument("--sample-size", type=int, default=20000, help="Advanced: maximum records written to workload.jsonl.")
+    build.add_argument("--sample-size", type=int, default=20000, help="Advanced: maximum records written to query_sample.jsonl.")
     build.add_argument(
         "--min-pattern-count",
         type=int,
@@ -51,20 +52,20 @@ def main(argv: list[str] | None = None) -> int:
     )
     generate.add_argument(
         "--output",
-        default=str(DEFAULT_GENERATED_WORKLOAD),
-        help=f"Output JSONL path. Default: {DEFAULT_GENERATED_WORKLOAD}",
+        default=None,
+        help=f"Output JSONL path. Default: {DEFAULT_QUERY_STREAM_DIR}/<profile>.jsonl",
     )
     generate.add_argument("--num", type=int, default=1000, help="Number of synthetic query rows to generate.")
     generate.add_argument("--seed", type=int, default=1, help="Random seed.")
     generate.add_argument(
         "--profile",
-        choices=["balanced", "mega_heavy", "external_table_stress"],
-        default="balanced",
-        help="Workload mix profile.",
+        choices=PROFILE_NAMES,
+        default="standard_workload",
+        help=f"Workload mix profile. Public profiles: {', '.join(PROFILE_NAMES)}.",
     )
 
     show = subparsers.add_parser("show-manifest", help="Print a compact manifest summary.")
-    show.add_argument("--model-dir", required=True, help="Directory containing manifest.json.")
+    show.add_argument("--model-dir", default=str(DEFAULT_PUBLIC_DIR), help=f"Directory containing benchmark_manifest.json. Default: {DEFAULT_PUBLIC_DIR}")
 
     profile = subparsers.add_parser("profile", help="Maintainer-only private profiling tools.")
     profile_subparsers = profile.add_subparsers(dest="profile_command", required=True)
@@ -105,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     dataset_generate.add_argument(
         "--output",
         default=None,
-        help="Output directory. Default: data/generated/<scale>.",
+        help=f"Output directory. Default: {DEFAULT_DATASET_DIR}/scale_<scale>.",
     )
     dataset_generate.add_argument(
         "--spec",
@@ -120,8 +121,8 @@ def main(argv: list[str] | None = None) -> int:
     dataset_generate.add_argument("--max-rows", type=int, default=None, help="Debug cap. Stops early if set.")
     dataset_generate.add_argument("--compression", default="snappy", help="Parquet compression when --format parquet.")
 
-    dataset_inspect = dataset_subparsers.add_parser("inspect", help="Print dataset manifest or scan file sizes.")
-    dataset_inspect.add_argument("path", help="Generated dataset directory.")
+    inspect_parser = dataset_subparsers.add_parser("inspect", help="Print dataset manifest or scan file sizes.")
+    inspect_parser.add_argument("path", help="Generated dataset directory.")
 
     args = parser.parse_args(argv)
 
@@ -142,18 +143,22 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "generate":
+        profile = normalize_profile(args.profile)
+        output = Path(args.output) if args.output else DEFAULT_QUERY_STREAM_DIR / f"{profile}.jsonl"
         count = generate_workload(
             model_dir=args.model_dir,
-            out_path=args.output,
+            out_path=output,
             num_queries=args.num,
             seed=args.seed,
-            profile=args.profile,
+            profile=profile,
         )
-        print(f"Generated {count} synthetic workload rows at {Path(args.output)}")
+        print(f"Generated {count} synthetic workload rows at {output}")
         return 0
 
     if args.command == "show-manifest":
-        manifest_path = Path(args.model_dir) / "manifest.json"
+        manifest_path = Path(args.model_dir) / "benchmark_manifest.json"
+        if not manifest_path.exists():
+            manifest_path = Path(args.model_dir) / "manifest.json"
         with manifest_path.open("r", encoding="utf-8") as f:
             manifest = json.load(f)
         print(json.dumps(manifest, indent=2, sort_keys=True))
@@ -192,7 +197,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "dataset":
         if args.dataset_command == "generate":
-            output = Path(args.output) if args.output else Path("data/generated") / args.scale
+            output = Path(args.output) if args.output else DEFAULT_DATASET_DIR / f"scale_{args.scale}"
             try:
                 result = generate_dataset(
                     scale=args.scale,

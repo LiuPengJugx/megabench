@@ -21,7 +21,7 @@ from .io import ensure_dir, write_json
 
 
 OFFICIAL_SCALES = ("1", "10", "100", "1000")
-DEFAULT_TABLE_NAME = "events_wide"
+DEFAULT_TABLE_NAME = "events_wide_table"
 
 
 @dataclass(frozen=True)
@@ -390,7 +390,7 @@ def generate_dataset(
     if fmt not in {"csv", "parquet"}:
         raise ValueError("format must be one of: csv, parquet")
     spec = _apply_temporal_overrides(load_distribution_spec(spec_path), start_date=start_date, days=days)
-    out_path = Path(output_dir) if output_dir is not None else Path("data/generated") / scale
+    out_path = Path(output_dir) if output_dir is not None else Path("artifacts/datasets") / f"scale_{scale}"
     if out_path.exists():
         shutil.rmtree(out_path)
     ensure_dir(out_path)
@@ -583,7 +583,7 @@ def _csv_line(values: list[Any]) -> str:
 
 def _write_file_index(output_dir: Path, files: list[Path]) -> None:
     rows = [{"path": str(path.relative_to(output_dir)), "bytes": path.stat().st_size} for path in sorted(files)]
-    write_json(output_dir / "files.json", {"files": rows})
+    write_json(output_dir / "file_index.json", {"files": rows})
 
 
 def _write_dataset_metadata(
@@ -599,7 +599,7 @@ def _write_dataset_metadata(
     start = date.fromisoformat(str(temporal.get("start_date", "2024-01-01")))
     days = max(1, int(temporal.get("days", 30)))
     end = start + timedelta(days=days - 1)
-    write_json(output_dir / "schema.json", {"table": result.table_name, "columns": schema}, pretty=True)
+    write_json(output_dir / "table_schema.json", {"table": result.table_name, "columns": schema}, pretty=True)
     write_json(
         output_dir / "manifest.json",
         {
@@ -625,4 +625,4 @@ def _write_dataset_metadata(
         },
         pretty=True,
     )
-    write_json(output_dir / "distribution_spec.snapshot.json", spec, pretty=True)
+    write_json(output_dir / "distribution_spec_used.json", spec, pretty=True)

@@ -28,7 +28,9 @@ class PipelineTest(unittest.TestCase):
                 min_pattern_count=2,
             )
             self.assertEqual(result.public_record_count, 3)
-            self.assertTrue((output_dir / "templates.json.gz").exists())
+            self.assertTrue((output_dir / "benchmark_manifest.json").exists())
+            self.assertTrue((output_dir / "workload" / "query_templates.json.gz").exists())
+            self.assertTrue((output_dir / "workload" / "query_sample.jsonl").exists())
 
             generated = Path(tmp) / "generated.jsonl"
             count = generate_workload(model_dir=output_dir, out_path=generated, num_queries=5, seed=7)
@@ -69,9 +71,9 @@ class PipelineTest(unittest.TestCase):
 
                 os.chdir(tmp)
                 self.assertEqual(main(["build", "--min-pattern-count", "2"]), 0)
-                self.assertTrue((Path(tmp) / "data" / "public" / "workload.jsonl").exists())
+                self.assertTrue((Path(tmp) / "data" / "public" / "workload" / "query_sample.jsonl").exists())
                 self.assertEqual(main(["generate", "--num", "2"]), 0)
-                self.assertTrue((Path(tmp) / "artifacts" / "generated_workload.jsonl").exists())
+                self.assertTrue((Path(tmp) / "artifacts" / "query_streams" / "standard_workload.jsonl").exists())
             finally:
                 import os
 

@@ -12,6 +12,7 @@ from typing import Any
 from .io import write_jsonl
 
 PLACEHOLDER_RE = re.compile(r"\{\{(date|datetime|int|float|str)\}\}")
+PROFILE_NAMES = ("standard_workload", "mega_query_heavy", "external_scan_heavy")
 
 
 def generate_workload(
@@ -20,8 +21,9 @@ def generate_workload(
     out_path: str | Path,
     num_queries: int,
     seed: int = 1,
-    profile: str = "balanced",
+    profile: str = "standard_workload",
 ) -> int:
+    profile = normalize_profile(profile)
     rng = random.Random(seed)
     templates = _load_templates(Path(model_dir))
     if not templates:
@@ -49,17 +51,17 @@ def generate_workload(
 
 
 def _load_templates(model_dir: Path) -> list[dict[str, Any]]:
-    json_path = model_dir / "templates.json"
-    gzip_path = model_dir / "templates.json.gz"
-    if json_path.exists():
-        with json_path.open("rt", encoding="utf-8") as f:
-            data = json.load(f)
-    elif gzip_path.exists():
-        with gzip.open(gzip_path, "rt", encoding="utf-8") as f:
-            data = json.load(f)
-    else:
-        raise FileNotFoundError(f"No templates.json or templates.json.gz found in {model_dir}")
-    return list(data.get("templates") or [])
+    candidates = [
+        model_dir / "workload" / "query_templates.json.gz",
+        model_dir / "workload" / "query_templates.json",
+    ]
+    for path in candidates:
+        if path.exists():
+            opener = gzip.open if path.suffix == ".gz" else open
+            with opener(path, "rt", encoding="utf-8") as f:
+                data = json.load(f)
+            return list(data.get("templates") or [])
+    raise FileNotFoundError(f"No query template catalog found in {model_dir}")
 
 
 def _template_weight(template: dict[str, Any], profile: str) -> float:
@@ -68,18 +70,27 @@ def _template_weight(template: dict[str, Any], profile: str) -> float:
     oracle_hists = template.get("oracle_bucket_hists") or {}
     weight = float(support)
 
-    if profile == "mega_heavy":
+    profile = normalize_profile(profile)
+    if profile == "mega_query_heavy":
         mega = int(label_counts.get("mega", 0))
         weight *= 1.0 + 3.0 * mega / support
-    elif profile == "external_table_stress":
+    elif profile == "external_scan_heavy":
         read_files = oracle_hists.get("lake_read_files") or {}
         read_size = oracle_hists.get("lake_read_size") or {}
         stress_bins = {"10k_100k", "100k_1m", "1m_10m", "10m_100m", "100GB_1TB", "1TB_10TB", "10TB_plus"}
         stress_hits = sum(count for name, count in {**read_files, **read_size}.items() if name in stress_bins)
         weight *= 1.0 + 2.0 * stress_hits / support
-    elif profile != "balanced":
+    elif profile != "standard_workload":
         raise ValueError(f"Unknown profile: {profile}")
     return max(weight, 0.1)
+
+
+def normalize_profile(profile: str) -> str:
+    if profile in PROFILE_NAMES:
+        return profile
+    else:
+        valid = ", ".join(PROFILE_NAMES)
+        raise ValueError(f"Unknown profile: {profile}. Expected one of: {valid}")
 
 
 def _instantiate_sql(sql: str, rng: random.Random) -> str:

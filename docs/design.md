@@ -10,18 +10,20 @@ private raw_data.jsonl
   -> plan feature extraction
   -> template mining
   -> rare-template filtering
-  -> public workload + template catalog + distribution report
+  -> data/public/workload/query_sample.jsonl
+  -> data/public/workload/query_templates.json.gz
+  -> data/public/workload/workload_stats.json
   -> synthetic workload generation
 
-public distribution_spec.json
+data/public/synthetic_dataset/distribution_spec.json
   -> deterministic wide-table row generation
   -> partitioned CSV or optional Parquet files
-  -> dataset manifest + schema + file index
+  -> dataset manifest + table_schema.json + file_index.json
 
 private column profiler
   -> guarded ClickHouse HTTP queries
   -> role-level cardinality/null/quantile buckets
-  -> optional manual update to public distribution_spec.json
+  -> optional manual update to data/public/synthetic_dataset/distribution_spec.json
 ```
 
 ## Dataset Generation
@@ -39,10 +41,11 @@ distribution parameters:
 - additional synthetic wide-table dimension, flag, and metric columns.
 
 Official target sizes are `1`, `10`, `100`, and `1000`, interpreted as GiB.
-Generated data is partitioned by `event_date`. The default date window comes
-from the public distribution spec and can be overridden with `--start-date` and
-`--days`. CSV requires only the Python standard library; Parquet is optional and
-requires `pyarrow`.
+Generated data is written under `artifacts/datasets/scale_<scale>/` by default,
+with one synthetic table directory named `events_wide_table/`, partitioned by
+`event_date`. The default date window comes from the public distribution spec
+and can be overridden with `--start-date` and `--days`. CSV requires only the
+Python standard library; Parquet is optional and requires `pyarrow`.
 
 ## Private Column Profiling
 

@@ -1,8 +1,9 @@
 # Metadata Query Sketches
 
 MegaBench public artifacts are generated offline. These metadata query sketches
-are for maintainers who need to refresh `distribution_spec.json`; they must be
-reviewed before running in any production environment.
+are for maintainers who need to refresh
+`data/public/synthetic_dataset/distribution_spec.json`; they must be reviewed
+before running in any production environment.
 
 Avoid `COUNT(*)`, `DISTINCT`, sampling over large external tables, or any full
 scan. Use catalog/system tables only.

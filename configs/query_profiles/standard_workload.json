@@ -1,0 +1,4 @@
+{
+  "name": "standard_workload",
+  "description": "Default query stream that samples query patterns proportional to their observed frequency."
+}

@@ -17,7 +17,7 @@ class SanitizeSQLTest(unittest.TestCase):
         self.assertNotIn("real_table", result.sql)
         self.assertNotIn("secret", result.sql)
         self.assertNotIn("user_id", result.sql)
-        self.assertIn("events_wide_001", result.sql)
+        self.assertIn("events_wide_table_001", result.sql)
         self.assertIn("{{date}}", result.sql)
         self.assertIn("{{str}}", result.sql)
         self.assertIn("{{int}}", result.sql)

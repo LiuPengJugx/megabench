@@ -21,12 +21,12 @@ workload：脱敏 SQL 形态、结构化特征、分桶后的 oracle 指标、�
 聚合、排序和多表关联。源集群、环境、库名/表名/列名、用户、query ID 和具体
 业务标识均不会公开。
 
-- `workload.jsonl`：公开 workload 样本，包含脱敏 SQL、执行前特征、脱敏后的 plan 特征、标签和分桶后的 oracle 指标。
-- `templates.json.gz`：从重复查询形态中挖掘出的模板目录。
-- `stats.json`：私有 trace 与公开样本的直方图摘要和验证指标。
-- `distribution_spec.json`：用于生成可执行大宽表数据集的粗粒度合成数据分布参数。
-- `manifest.json`：artifact 元信息，包括扫描记录数、样本大小、模板数量和隐私边界。
-- `validation_report.md`：简洁的 artifact 质量与隐私报告。
+- `benchmark_manifest.json`：artifact 元信息，包括扫描记录数、样本大小、模板数量和隐私边界。
+- `workload/query_sample.jsonl`：公开 workload 样本，包含脱敏 SQL、执行前特征、脱敏后的 plan 特征、标签和分桶后的 oracle 指标。
+- `workload/query_templates.json.gz`：从重复查询形态中挖掘出的模板目录。
+- `workload/workload_stats.json`：私有 trace 与公开样本的直方图摘要和验证指标。
+- `workload/validation_report.md`：简洁的 artifact 质量与隐私报告。
+- `synthetic_dataset/distribution_spec.json`：用于生成可执行大宽表数据集的粗粒度合成数据分布参数。
 
 项目不会输出原始 SQL、原始 query plan、真实库名/表名/列名、用户、query ID、异常文本，以及精确的运行时或 IO 指标。
 
@@ -40,10 +40,11 @@ source ./env.sh
 
 ## 生成合成数据集
 
-MegaBench 可以基于公开的 `data/public/distribution_spec.json`，在本地生成
-ClickBench-like 的大宽事件/事实表。官方目标规模包括 `1`、`10`、`100`
-和 `1000`，表示生成数据文件的 GiB 规模。默认合成日期窗口从
-`2024-01-01` 开始，持续 30 天。
+MegaBench 可以基于公开的
+`data/public/synthetic_dataset/distribution_spec.json`，在本地生成名为
+`events_wide_table` 的 ClickBench-like 大宽事件/事实表。官方目标规模包括
+`1`、`10`、`100` 和 `1000`，表示生成数据文件的 GiB 规模。默认合成日期
+窗口从 `2024-01-01` 开始，持续 30 天。
 
 ```bash
 megabench dataset generate --scale 1
@@ -55,15 +56,15 @@ megabench dataset generate --scale 1
 megabench dataset generate --scale 1 --start-date 2024-06-01 --days 14
 ```
 
-默认会在 `data/generated/1/` 下写出 CSV 文件：
+默认会在 `artifacts/datasets/scale_1/` 下写出 CSV 文件：
 
 ```text
-data/generated/1/
+artifacts/datasets/scale_1/
   manifest.json
-  schema.json
-  files.json
-  distribution_spec.snapshot.json
-  events_wide/
+  table_schema.json
+  file_index.json
+  distribution_spec_used.json
+  events_wide_table/
     event_date=2024-01-01/
       part-00000.csv
 ```
@@ -82,7 +83,7 @@ megabench dataset generate --scale 1 --format parquet
 检查已生成的数据集：
 
 ```bash
-megabench dataset inspect data/generated/1
+megabench dataset inspect artifacts/datasets/scale_1
 ```
 
 ## 生成合成 Workload 记录
@@ -92,13 +93,13 @@ megabench generate
 ```
 
 该命令会从仓库内置的 `data/public/` 模板中采样，并写入
-`artifacts/generated_workload.jsonl`。
+`artifacts/query_streams/standard_workload.jsonl`。
 
 支持的 profiles：
 
-- `balanced`：按观测频率采样查询模式。
-- `mega_heavy`：提高更容易产生 Mega-query 的模板权重。
-- `external_table_stress`：提高大规模外表扫描模板权重。
+- `standard_workload`：按观测频率采样查询模式。
+- `mega_query_heavy`：提高更容易产生 Mega-query 的模板权重。
+- `external_scan_heavy`：提高大规模外表扫描模板权重。
 
 ## 记录格式
 
@@ -106,7 +107,7 @@ megabench generate
 {
   "query_id": "mq_00000001",
   "template_id": "T0001",
-  "sql": "SELECT count() FROM events_wide_001 WHERE c_0001 = {{int}}",
+  "sql": "SELECT count() FROM events_wide_table_001 WHERE c_0001 = {{int}}",
   "pre_execution_features": {
     "num_tables": 1,
     "num_columns": 3,
@@ -134,13 +135,14 @@ megabench generate
 
 公开 artifact 通过抽象化生成，而不是可逆脱敏：
 
-- 标识符会变成 `events_wide_001`、`c_0001` 这类角色化名称；
+- 标识符会变成 `events_wide_table_001`、`c_0001` 这类角色化名称；
 - 字符串、数值和日期 literal 会变成占位符；
 - 未知函数会映射成 `fn_001`、`fn_002` 等名称；
 - 运行时指标会进行分桶；
 - 出现次数低于阈值的查询模式会被丢弃。
 
-发布前建议复核 `validation_report.md`，并人工抽查 `workload.jsonl` 的随机样本。
+发布前建议复核 `data/public/workload/validation_report.md`，并人工抽查
+`data/public/workload/query_sample.jsonl` 的随机样本。
 
 ## 范围
 
@@ -178,5 +180,5 @@ megabench profile columns \
 ```
 
 如果 profiling SQL 失败或超时，MegaBench 会按生成的 `query_id` 发送
-`KILL QUERY`。将任何粗粒度摘要合入 `data/public/distribution_spec.json` 前，
-需要先人工复核私有输出。
+`KILL QUERY`。将任何粗粒度摘要合入
+`data/public/synthetic_dataset/distribution_spec.json` 前，需要先人工复核私有输出。

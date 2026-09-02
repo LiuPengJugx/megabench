@@ -26,15 +26,18 @@ aggregation, ordering, and joins. Source clusters, environments,
 database/table/column names, users, query IDs, and concrete business identifiers
 are intentionally excluded.
 
-- `workload.jsonl`: a public sample with sanitized SQL, pre-execution features,
-  sanitized plan features, labels, and bucketed oracle metrics.
-- `templates.json.gz`: template catalog mined from recurring query shapes.
-- `stats.json`: private/public histogram summaries and validation metrics.
-- `distribution_spec.json`: coarse synthetic-data distribution parameters for
-  generating an executable wide-table dataset.
-- `manifest.json`: artifact metadata, including scanned record counts, sample
-  size, template count, and privacy boundary.
-- `validation_report.md`: compact artifact quality and privacy report.
+- `benchmark_manifest.json`: artifact metadata, including scanned record
+  counts, sample size, template count, and privacy boundary.
+- `workload/query_sample.jsonl`: a public sample with sanitized SQL,
+  pre-execution features, sanitized plan features, labels, and bucketed oracle
+  metrics.
+- `workload/query_templates.json.gz`: template catalog mined from recurring
+  query shapes.
+- `workload/workload_stats.json`: private/public histogram summaries and
+  validation metrics.
+- `workload/validation_report.md`: compact artifact quality and privacy report.
+- `synthetic_dataset/distribution_spec.json`: coarse synthetic-data
+  distribution parameters for generating an executable wide-table dataset.
 
 Raw SQL, raw query plans, real database/table/column names, users, query IDs,
 exception strings, and exact runtime/IO metrics are not emitted.
@@ -51,10 +54,11 @@ library is required. The dev environment includes `pytest`.
 
 ## Generate Synthetic Dataset
 
-MegaBench can generate a local ClickBench-like wide event/fact table using the
-public `data/public/distribution_spec.json`. Official target scales are `1`,
-`10`, `100`, and `1000`, interpreted as GiB of generated data files. The
-default synthetic date window starts at `2024-01-01` for 30 days.
+MegaBench can generate a local ClickBench-like wide event/fact table named
+`events_wide_table` using the public
+`data/public/synthetic_dataset/distribution_spec.json`. Official target scales
+are `1`, `10`, `100`, and `1000`, interpreted as GiB of generated data files.
+The default synthetic date window starts at `2024-01-01` for 30 days.
 
 ```bash
 megabench dataset generate --scale 1
@@ -66,15 +70,15 @@ Override the generated partition dates when needed:
 megabench dataset generate --scale 1 --start-date 2024-06-01 --days 14
 ```
 
-By default this writes CSV files under `data/generated/1/`:
+By default this writes CSV files under `artifacts/datasets/scale_1/`:
 
 ```text
-data/generated/1/
+artifacts/datasets/scale_1/
   manifest.json
-  schema.json
-  files.json
-  distribution_spec.snapshot.json
-  events_wide/
+  table_schema.json
+  file_index.json
+  distribution_spec_used.json
+  events_wide_table/
     event_date=2024-01-01/
       part-00000.csv
 ```
@@ -94,7 +98,7 @@ megabench dataset generate --scale 1 --format parquet
 Inspect a generated dataset:
 
 ```bash
-megabench dataset inspect data/generated/1
+megabench dataset inspect artifacts/datasets/scale_1
 ```
 
 ## Generate Synthetic Workload Rows
@@ -104,13 +108,14 @@ megabench generate
 ```
 
 This samples from the shipped `data/public/` templates and writes
-`artifacts/generated_workload.jsonl`.
+`artifacts/query_streams/standard_workload.jsonl`.
 
 Supported profiles:
 
-- `balanced`: sample query patterns proportional to observed frequency.
-- `mega_heavy`: upweight templates that often produce mega queries.
-- `external_table_stress`: upweight large external-table scan templates.
+- `standard_workload`: sample query patterns proportional to observed
+  frequency.
+- `mega_query_heavy`: upweight templates that often produce mega queries.
+- `external_scan_heavy`: upweight large external-table scan templates.
 
 ## Record Format
 
@@ -118,7 +123,7 @@ Supported profiles:
 {
   "query_id": "mq_00000001",
   "template_id": "T0001",
-  "sql": "SELECT count() FROM events_wide_001 WHERE c_0001 = {{int}}",
+  "sql": "SELECT count() FROM events_wide_table_001 WHERE c_0001 = {{int}}",
   "pre_execution_features": {
     "num_tables": 1,
     "num_columns": 3,
@@ -147,14 +152,15 @@ features for pre-execution mega-query detection.
 
 The public artifact is produced through abstraction, not reversible masking:
 
-- identifiers become role-like names such as `events_wide_001` and `c_0001`;
+- identifiers become role-like names such as `events_wide_table_001` and
+  `c_0001`;
 - string, numeric, and date literals become placeholders;
 - unknown functions are mapped to `fn_001`, `fn_002`, ...;
 - runtime metrics are bucketed;
 - query patterns below the minimum count are dropped.
 
-Before publishing, review `validation_report.md` and inspect a random sample of
-`workload.jsonl` manually.
+Before publishing, review `data/public/workload/validation_report.md` and
+inspect a random sample of `data/public/workload/query_sample.jsonl` manually.
 
 ## Scope
 
@@ -196,4 +202,4 @@ megabench profile columns \
 
 If a profiling query fails or times out, MegaBench sends `KILL QUERY` for the
 generated `query_id`. Review the private output before copying any coarse
-summary into `data/public/distribution_spec.json`.
+summary into `data/public/synthetic_dataset/distribution_spec.json`.

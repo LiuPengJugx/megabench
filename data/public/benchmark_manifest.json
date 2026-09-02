@@ -1,0 +1,26 @@
+{
+  "artifact_files": {
+    "workload_sample": "workload/query_sample.jsonl",
+    "query_templates": "workload/query_templates.json.gz",
+    "workload_stats": "workload/workload_stats.json",
+    "validation_report": "workload/validation_report.md",
+    "distribution_spec": "synthetic_dataset/distribution_spec.json"
+  },
+  "benchmark": "megabench",
+  "format_version": 1,
+  "keep_rare": false,
+  "min_pattern_count": 3,
+  "privacy_boundary": {
+    "raw_identifiers_emitted": false,
+    "raw_plan_emitted": false,
+    "raw_sql_emitted": false,
+    "runtime_metrics_are_bucketed": true
+  },
+  "private_records_scanned": 242712,
+  "public_workload_records": 5000,
+  "retained_records": 141270,
+  "sample_seed": 1,
+  "sample_size": 5000,
+  "source_files": 57,
+  "template_count": 15570
+}
