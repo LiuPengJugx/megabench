@@ -17,6 +17,11 @@ public distribution_spec.json
   -> deterministic wide-table row generation
   -> partitioned CSV or optional Parquet files
   -> dataset manifest + schema + file index
+
+private column profiler
+  -> guarded ClickHouse HTTP queries
+  -> role-level cardinality/null/quantile buckets
+  -> optional manual update to public distribution_spec.json
 ```
 
 ## Dataset Generation
@@ -38,6 +43,21 @@ Generated data is partitioned by `event_date`. The default date window comes
 from the public distribution spec and can be overridden with `--start-date` and
 `--days`. CSV requires only the Python standard library; Parquet is optional and
 requires `pyarrow`.
+
+## Private Column Profiling
+
+`megabench profile columns` is a maintainer-only tool for calibrating the public
+distribution spec. It selects candidate columns by role, runs bounded SQL over
+private tables, and writes only role-level summaries:
+
+- approximate distinct-count buckets;
+- null-rate buckets;
+- metric quantile buckets;
+- type-family counts.
+
+The profiler does not emit raw table names, raw column names, or topK values.
+Each query carries a generated `query_id`; if the HTTP request fails or times
+out, MegaBench attempts `KILL QUERY` for that `query_id`.
 
 ## Public vs Oracle Fields
 

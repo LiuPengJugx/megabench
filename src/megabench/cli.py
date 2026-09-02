@@ -9,6 +9,7 @@ from pathlib import Path
 from .dataset import OFFICIAL_SCALES, format_size, generate_dataset, inspect_dataset
 from .generate import generate_workload
 from .mine import build_public_artifacts
+from .profile import DEFAULT_PROFILE_OUTPUT, profile_columns
 
 
 DEFAULT_TRACE_PATH = Path("data/private")
@@ -64,6 +65,30 @@ def main(argv: list[str] | None = None) -> int:
 
     show = subparsers.add_parser("show-manifest", help="Print a compact manifest summary.")
     show.add_argument("--model-dir", required=True, help="Directory containing manifest.json.")
+
+    profile = subparsers.add_parser("profile", help="Maintainer-only private profiling tools.")
+    profile_subparsers = profile.add_subparsers(dest="profile_command", required=True)
+
+    profile_columns_parser = profile_subparsers.add_parser(
+        "columns",
+        help="Profile coarse column distributions with guarded ClickHouse HTTP queries.",
+    )
+    profile_columns_parser.add_argument("--http-url", required=True, help="ClickHouse HTTP endpoint URL.")
+    profile_columns_parser.add_argument("--user", default=None, help="ClickHouse user.")
+    profile_columns_parser.add_argument("--password", default=None, help="ClickHouse password. Prefer --password-env.")
+    profile_columns_parser.add_argument("--password-env", default=None, help="Environment variable containing password.")
+    profile_columns_parser.add_argument("--trace", default=None, help="Private raw_data.jsonl trace root used to select top tables.")
+    profile_columns_parser.add_argument("--trace-limit", type=int, default=50_000, help="Maximum private trace rows scanned to select top tables.")
+    profile_columns_parser.add_argument("--table", action="append", default=[], help="Table to profile as database.table. Repeatable.")
+    profile_columns_parser.add_argument("--where", default=None, help="Optional WHERE clause for profiled source tables.")
+    profile_columns_parser.add_argument("--rows-per-table", type=int, default=10_000, help="Rows sampled per table via LIMIT.")
+    profile_columns_parser.add_argument("--max-tables", type=int, default=5, help="Maximum tables selected from --trace/--table.")
+    profile_columns_parser.add_argument("--max-columns-per-role", type=int, default=4, help="Maximum columns per inferred role per table.")
+    profile_columns_parser.add_argument("--max-execution-time", type=int, default=10, help="Server-side max_execution_time.")
+    profile_columns_parser.add_argument("--max-bytes-to-read", type=int, default=1 << 30, help="Server-side max_bytes_to_read.")
+    profile_columns_parser.add_argument("--timeout", type=int, default=15, help="Client-side HTTP timeout in seconds.")
+    profile_columns_parser.add_argument("--query-prefix", default="megabench_profile", help="Prefix for generated query_id values.")
+    profile_columns_parser.add_argument("--output", default=str(DEFAULT_PROFILE_OUTPUT), help=f"Output path. Default: {DEFAULT_PROFILE_OUTPUT}")
 
     dataset = subparsers.add_parser("dataset", help="Generate or inspect synthetic wide-table datasets.")
     dataset_subparsers = dataset.add_subparsers(dest="dataset_command", required=True)
@@ -133,6 +158,37 @@ def main(argv: list[str] | None = None) -> int:
             manifest = json.load(f)
         print(json.dumps(manifest, indent=2, sort_keys=True))
         return 0
+
+    if args.command == "profile":
+        if args.profile_command == "columns":
+            try:
+                result = profile_columns(
+                    http_url=args.http_url,
+                    output_path=args.output,
+                    user=args.user,
+                    password=args.password,
+                    password_env=args.password_env,
+                    trace_path=args.trace,
+                    trace_limit=args.trace_limit,
+                    tables=args.table,
+                    where=args.where,
+                    rows_per_table=args.rows_per_table,
+                    max_tables=args.max_tables,
+                    max_columns_per_role=args.max_columns_per_role,
+                    max_execution_time=args.max_execution_time,
+                    max_bytes_to_read=args.max_bytes_to_read,
+                    timeout=args.timeout,
+                    query_prefix=args.query_prefix,
+                )
+            except (OSError, RuntimeError, ValueError) as exc:
+                parser.exit(1, f"error: {exc}\n")
+            print(
+                "Profiled column distributions: "
+                f"tables={result.table_count}, columns={result.column_count}, "
+                f"queries={result.query_count}, kill_attempts={result.killed_queries}, "
+                f"output={result.output_path}"
+            )
+            return 0
 
     if args.command == "dataset":
         if args.dataset_command == "generate":

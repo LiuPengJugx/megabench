@@ -173,3 +173,27 @@ runners are future work.
 
 The `build` command regenerates `data/public/` from a private trace. It is not
 needed by benchmark users.
+
+Private column profiling can be used to refresh the synthetic data distribution
+spec. It runs guarded ClickHouse HTTP queries, samples only a bounded number of
+rows per selected table, and writes a redacted role-level profile without raw
+table names, column names, or topK values:
+
+```bash
+MEGABENCH_CH_PASSWORD=... \
+megabench profile columns \
+  --http-url http://host:8123/ \
+  --user user \
+  --password-env MEGABENCH_CH_PASSWORD \
+  --trace data/private \
+  --where "event_date = toDate('2024-01-01')" \
+  --max-tables 5 \
+  --rows-per-table 10000 \
+  --max-execution-time 10 \
+  --max-bytes-to-read 1073741824 \
+  --output artifacts/private/column_profile.json
+```
+
+If a profiling query fails or times out, MegaBench sends `KILL QUERY` for the
+generated `query_id`. Review the private output before copying any coarse
+summary into `data/public/distribution_spec.json`.

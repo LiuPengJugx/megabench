@@ -157,3 +157,26 @@ MegaBench v0.2 不是完整的数据库引擎 benchmark。它适用于：
 ## 维护者
 
 `build` 命令用于从私有 trace 重新生成 `data/public/`，普通 benchmark 用户不需要使用。
+
+私有侧 column profiling 可用于刷新合成数据分布规格。它通过受保护的
+ClickHouse HTTP 查询运行，只对选中表采样有界行数，并输出脱敏后的列角色级 profile，
+不会写出真实表名、列名或 topK 原始值：
+
+```bash
+MEGABENCH_CH_PASSWORD=... \
+megabench profile columns \
+  --http-url http://host:8123/ \
+  --user user \
+  --password-env MEGABENCH_CH_PASSWORD \
+  --trace data/private \
+  --where "event_date = toDate('2024-01-01')" \
+  --max-tables 5 \
+  --rows-per-table 10000 \
+  --max-execution-time 10 \
+  --max-bytes-to-read 1073741824 \
+  --output artifacts/private/column_profile.json
+```
+
+如果 profiling SQL 失败或超时，MegaBench 会按生成的 `query_id` 发送
+`KILL QUERY`。将任何粗粒度摘要合入 `data/public/distribution_spec.json` 前，
+需要先人工复核私有输出。
