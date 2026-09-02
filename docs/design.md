@@ -33,11 +33,11 @@ distribution parameters:
 - JSON-like attributes and array-like columns;
 - additional synthetic wide-table dimension, flag, and metric columns.
 
-Official target sizes are `1G`, `10G`, `100G`, and `1000G`. Generated data is
-partitioned by `event_date`. The default date window comes from the public
-distribution spec and can be overridden with `--start-date` and `--days`. CSV
-requires only the Python standard library; Parquet is optional and requires
-`pyarrow`.
+Official target sizes are `1`, `10`, `100`, and `1000`, interpreted as GiB.
+Generated data is partitioned by `event_date`. The default date window comes
+from the public distribution spec and can be overridden with `--start-date` and
+`--days`. CSV requires only the Python standard library; Parquet is optional and
+requires `pyarrow`.
 
 ## Public vs Oracle Fields
 

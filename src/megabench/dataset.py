@@ -20,7 +20,7 @@ from typing import Any
 from .io import ensure_dir, write_json
 
 
-OFFICIAL_SCALES = ("1G", "10G", "100G", "1000G")
+OFFICIAL_SCALES = ("1", "10", "100", "1000")
 DEFAULT_TABLE_NAME = "events_wide"
 
 
@@ -267,7 +267,7 @@ class _ChoiceSampler:
         return self.values[self.sampler.index(rng)]
 
 
-def parse_size(size: str) -> int:
+def parse_size(size: str, *, default_unit: str = "B") -> int:
     text = size.strip().upper()
     if not text:
         raise ValueError("scale cannot be empty")
@@ -283,12 +283,15 @@ def parse_size(size: str) -> int:
         "T": 1 << 40,
         "TB": 1 << 40,
     }
+    default_unit = default_unit.strip().upper()
+    if default_unit not in units:
+        raise ValueError(f"Invalid default unit: {default_unit!r}")
     for unit in sorted(units, key=len, reverse=True):
         if unit and text.endswith(unit):
             number = text[: -len(unit)]
             break
     else:
-        unit = ""
+        unit = default_unit
         number = text
     try:
         value = float(number)
@@ -379,7 +382,7 @@ def generate_dataset(
     start_date: str | None = None,
     days: int | None = None,
 ) -> DatasetResult:
-    target_bytes = parse_size(scale)
+    target_bytes = parse_size(scale, default_unit="GB")
     target_file_bytes = parse_size(target_file_size)
     if target_file_bytes <= 0:
         raise ValueError("target_file_size must be positive")

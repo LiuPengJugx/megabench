@@ -52,24 +52,24 @@ library is required. The dev environment includes `pytest`.
 ## Generate Synthetic Dataset
 
 MegaBench can generate a local ClickBench-like wide event/fact table using the
-public `data/public/distribution_spec.json`. Official target scales are `1G`,
-`10G`, `100G`, and `1000G`; the target refers to generated data-file size. The
+public `data/public/distribution_spec.json`. Official target scales are `1`,
+`10`, `100`, and `1000`, interpreted as GiB of generated data files. The
 default synthetic date window starts at `2024-01-01` for 30 days.
 
 ```bash
-megabench dataset generate --scale 1G
+megabench dataset generate --scale 1
 ```
 
 Override the generated partition dates when needed:
 
 ```bash
-megabench dataset generate --scale 1G --start-date 2024-06-01 --days 14
+megabench dataset generate --scale 1 --start-date 2024-06-01 --days 14
 ```
 
-By default this writes CSV files under `data/generated/1G/`:
+By default this writes CSV files under `data/generated/1/`:
 
 ```text
-data/generated/1G/
+data/generated/1/
   manifest.json
   schema.json
   files.json
@@ -88,13 +88,13 @@ Parquet output is supported when `pyarrow` is installed:
 
 ```bash
 uv sync --extra parquet
-megabench dataset generate --scale 1G --format parquet
+megabench dataset generate --scale 1 --format parquet
 ```
 
 Inspect a generated dataset:
 
 ```bash
-megabench dataset inspect data/generated/1G
+megabench dataset inspect data/generated/1
 ```
 
 ## Generate Synthetic Workload Rows
@@ -162,7 +162,7 @@ MegaBench v0.2 is not a full database-engine benchmark. It is meant for:
 
 - training and evaluating mega-query classifiers;
 - studying realistic external-table OLAP workload distributions;
-- generating synthetic wide-table data at `1G`, `10G`, `100G`, and `1000G`;
+- generating synthetic wide-table data at `1`, `10`, `100`, and `1000` GiB;
 - generating larger synthetic query streams from observed templates.
 
 The generated dataset is synthetic and executable, but it should not be treated

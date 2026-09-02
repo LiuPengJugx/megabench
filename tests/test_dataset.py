@@ -15,12 +15,13 @@ class DatasetTest(unittest.TestCase):
         self.assertEqual(parse_size("1K"), 1024)
         self.assertEqual(parse_size("1G"), 1 << 30)
         self.assertEqual(parse_size("1000G"), 1000 * (1 << 30))
+        self.assertEqual(parse_size("1", default_unit="GB"), 1 << 30)
 
     def test_generate_csv_dataset(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "dataset"
             result = generate_dataset(
-                scale="12K",
+                scale="0.000012",
                 output_dir=out,
                 spec_path=SPEC_PATH,
                 fmt="csv",
@@ -46,7 +47,7 @@ class DatasetTest(unittest.TestCase):
                     "dataset",
                     "generate",
                     "--scale",
-                    "8K",
+                    "0.000008",
                     "--output",
                     str(out),
                     "--spec",
@@ -67,7 +68,7 @@ class DatasetTest(unittest.TestCase):
             self.assertEqual(manifest["start_date"], "2024-06-01")
             self.assertEqual(manifest["end_date"], "2024-06-01")
             self.assertEqual(manifest["days"], 1)
-            self.assertGreaterEqual(manifest["actual_data_bytes"], parse_size("8K"))
+            self.assertGreaterEqual(manifest["actual_data_bytes"], parse_size("0.000008", default_unit="GB"))
             self.assertTrue((out / "events_wide" / "event_date=2024-06-01").exists())
 
 

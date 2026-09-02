@@ -41,24 +41,24 @@ source ./env.sh
 ## 生成合成数据集
 
 MegaBench 可以基于公开的 `data/public/distribution_spec.json`，在本地生成
-ClickBench-like 的大宽事件/事实表。官方目标规模包括 `1G`、`10G`、`100G`
-和 `1000G`；这里的规模指生成后的数据文件大小。默认合成日期窗口从
+ClickBench-like 的大宽事件/事实表。官方目标规模包括 `1`、`10`、`100`
+和 `1000`，表示生成数据文件的 GiB 规模。默认合成日期窗口从
 `2024-01-01` 开始，持续 30 天。
 
 ```bash
-megabench dataset generate --scale 1G
+megabench dataset generate --scale 1
 ```
 
 需要时可以覆盖生成的分区日期：
 
 ```bash
-megabench dataset generate --scale 1G --start-date 2024-06-01 --days 14
+megabench dataset generate --scale 1 --start-date 2024-06-01 --days 14
 ```
 
-默认会在 `data/generated/1G/` 下写出 CSV 文件：
+默认会在 `data/generated/1/` 下写出 CSV 文件：
 
 ```text
-data/generated/1G/
+data/generated/1/
   manifest.json
   schema.json
   files.json
@@ -76,13 +76,13 @@ data/generated/1G/
 
 ```bash
 uv sync --extra parquet
-megabench dataset generate --scale 1G --format parquet
+megabench dataset generate --scale 1 --format parquet
 ```
 
 检查已生成的数据集：
 
 ```bash
-megabench dataset inspect data/generated/1G
+megabench dataset inspect data/generated/1
 ```
 
 ## 生成合成 Workload 记录
@@ -148,7 +148,7 @@ MegaBench v0.2 不是完整的数据库引擎 benchmark。它适用于：
 
 - 训练和评估 Mega-query 分类器；
 - 研究真实外表 OLAP workload 分布；
-- 生成 `1G`、`10G`、`100G` 和 `1000G` 规模的合成大宽表数据；
+- 生成 `1`、`10`、`100` 和 `1000` GiB 规模的合成大宽表数据；
 - 基于观测模板生成更大的合成查询流。
 
 当前生成的数据集是 synthetic 且可执行的，但还不应被视为完整的数据库引擎 benchmark。

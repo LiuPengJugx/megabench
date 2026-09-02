@@ -75,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
     dataset_generate.add_argument(
         "--scale",
         required=True,
-        help=f"Target generated data size. Official scales: {', '.join(OFFICIAL_SCALES)}.",
+        help=f"Target data size in GiB. Official scales: {', '.join(OFFICIAL_SCALES)}.",
     )
     dataset_generate.add_argument(
         "--output",
