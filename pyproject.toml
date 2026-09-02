@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "megabench"
+version = "0.1.0"
+description = "Trace-derived workload benchmark tooling for external-table OLAP mega-query detection."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "MegaBench contributors" }]
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+megabench = "megabench.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

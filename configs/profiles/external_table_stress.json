@@ -1,0 +1,4 @@
+{
+  "name": "external_table_stress",
+  "description": "Upweight templates with large external-table IO buckets."
+}

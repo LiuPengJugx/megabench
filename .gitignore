@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# Generated benchmark artifacts can be large and may derive from private traces.
+artifacts/
+data/private/
+outputs/
+public/
+*.jsonl
+!data/
+!data/public/
+!data/public/**
+!examples/
+!examples/*.jsonl
